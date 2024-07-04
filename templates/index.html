@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>InsureGPT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #chatContainer {
+            width: 100vw;
+            max-width: 60%;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #chatHeader {
+            background-color: #4CAF50;
+            /* background-color: #0261A8; */
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+        #chatBody {
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        #chatBody p {
+            margin: 5px 0;
+        }
+        .userQuery {
+            align-self: flex-end;
+            background-color: #DCF8C6;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+        .botResponse {
+            align-self: flex-start;
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+        #chatForm {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+        }
+        #query {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-right: 10px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        #submit {
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="chatContainer">
+        <div id="chatHeader">
+            <h1>InsureGPT</h1>
+        </div>
+        <div id="chatBody"></div>
+        <form id="chatForm">
+            <input type="text" name="query" id="query" placeholder="Search a term or ask a question...">
+            <input type="submit" value="Ask" id="submit">
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('chatForm').onsubmit = async function(event) {
+            event.preventDefault();
+            const query = document.getElementById('query').value;
+    
+            if (!query) return;
+    
+            // Add the user's query to the chat body
+            const userQuery = document.createElement('p');
+            userQuery.className = 'userQuery';
+            userQuery.innerText = query;
+            document.getElementById('chatBody').appendChild(userQuery);
+    
+            // Scroll to the bottom
+            document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+    
+            // Send the query to the server
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({'query': query}),
+            });
+    
+            // Get the response from the server
+            const result = await response.json();
+    
+            // Add the bot's response to the chat body
+            const botResponse = document.createElement('div');
+            botResponse.className = 'botResponse';
+    
+            // Check if the response type is 'term' or 'faq'
+            if (result.type === 'term') {
+                // Handle single definition response
+                const definition = document.createElement('p');
+                definition.innerHTML = `&bull; ${result.response}`;
+                botResponse.appendChild(definition);
+            } else if (result.type === 'faq') {
+                // Handle array of FAQ responses
+                const faqResponses = result.response;
+                faqResponses.forEach((faqResponse, index) => {
+                    const definition = document.createElement('p');
+                    definition.innerHTML = `${index > 0 ? '<br>' : ''}&bull; ${faqResponse}`;
+                    botResponse.appendChild(definition);
+                });
+            } else {
+                // Default response type handling
+                const message = document.createElement('p');
+                message.innerHTML = `&bull; ${result.response}`;
+                botResponse.appendChild(message);
+            }
+    
+            document.getElementById('chatBody').appendChild(botResponse);
+    
+            // Clear the input field
+            document.getElementById('query').value = '';
+    
+            // Scroll to the bottom after adding bot's response
+            document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+        };
+    </script>
+    
+    
+
+    
+    
+</body>
+</html>
