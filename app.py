@@ -60,11 +60,18 @@ def semantic_search(query, threshold=0.5):
     query_embedding = model.encode(query)
     similarities = cosine_similarity([query_embedding], faq_embeddings)[0]
     results = []
+    related_searches = []
+
     for i, similarity in enumerate(similarities):
         if similarity > threshold:
             results.append((faq_questions[i], faq_answers[i], similarity))
+            related_searches.append(faq_questions[i])
+
     results.sort(key=lambda x: x[2], reverse=True)  # Sort by similarity score
-    return [result[1] for result in results]  # Return only the answers
+    top_answers = [result[1] for result in results[:3]]  # Return only the top 3 answers
+
+    # Return both top answers and related searches
+    return top_answers, related_searches[:3]
 
 def get_qa_answer(question, context):
     try:
@@ -81,13 +88,12 @@ def search_important_terms(query):
 
     # Assuming important terms data has 'term' and 'definition' columns
     for df in terms_data.values():
-        if 'term' in df.columns and 'defination' in df.columns:  # Corrected spelling of 'definition'
+        if 'term' in df.columns and 'definition' in df.columns:
             for _, row in df.iterrows():
                 # Convert row['term'] to string to avoid AttributeError
                 if query.lower() == str(row['term']).lower():
-                    return row['defination']
+                    return row['definition']
     return None
-
 
 @app.route('/')
 def home():
@@ -107,23 +113,23 @@ def ask():
         # Check if the query matches any important terms
         term_definition = search_important_terms(corrected_query)
         if term_definition:
-            return jsonify({'response': [term_definition]})
+            return jsonify({'response': [term_definition], 'related_searches': []})
 
         # If not an important term, search in FAQs
-        faq_answers = semantic_search(corrected_query)
+        faq_answers, related_searches = semantic_search(corrected_query)
         if faq_answers:
             # Return only the top 3 responses
-            return jsonify({'response': faq_answers[:3]})
+            return jsonify({'response': faq_answers[:3], 'related_searches': related_searches})
 
         # If no relevant FAQs found, try QA pipeline
         # Assuming all FAQ answers are in one sheet, use it as context
         faq_context = " ".join(faq_answers)
         qa_answer = get_qa_answer(corrected_query, faq_context)
-        return jsonify({'response': [qa_answer] if qa_answer else ["Sorry, I couldn't find an answer to your question."]})
+        return jsonify({'response': [qa_answer] if qa_answer else ["Sorry, I couldn't find an answer to your question."], 'related_searches': []})
 
     except Exception as e:
         print(f"Error in /ask route: {e}")
-        return jsonify({'response': [f'An error occurred: {str(e)}']})
+        return jsonify({'response': [f'An error occurred: {str(e)}'], 'related_searches': []})
 
 if __name__ == '__main__':
     app.run(debug=True)

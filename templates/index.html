@@ -23,7 +23,6 @@
         }
         #chatHeader {
             background-color: #4CAF50;
-            /* background-color: #0261A8; */
             color: white;
             text-align: center;
             padding: 10px;
@@ -51,6 +50,19 @@
             padding: 10px;
             border-radius: 10px;
             max-width: 70%;
+        }
+        .relatedSearches {
+            margin-top: 10px;
+            text-align: center;
+        }
+        .relatedSearches button {
+            margin: 5px;
+            padding: 5px 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
         }
         #chatForm {
             display: flex;
@@ -91,18 +103,18 @@
         document.getElementById('chatForm').onsubmit = async function(event) {
             event.preventDefault();
             const query = document.getElementById('query').value;
-    
+
             if (!query) return;
-    
+
             // Add the user's query to the chat body
             const userQuery = document.createElement('p');
             userQuery.className = 'userQuery';
             userQuery.innerText = query;
             document.getElementById('chatBody').appendChild(userQuery);
-    
+
             // Scroll to the bottom
             document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-    
+
             // Send the query to the server
             const response = await fetch('/ask', {
                 method: 'POST',
@@ -111,48 +123,49 @@
                 },
                 body: new URLSearchParams({'query': query}),
             });
-    
+
             // Get the response from the server
             const result = await response.json();
-    
+
             // Add the bot's response to the chat body
             const botResponse = document.createElement('div');
             botResponse.className = 'botResponse';
-    
+
             // Check if the response type is 'term' or 'faq'
-            if (result.type === 'term') {
-                // Handle single definition response
-                const definition = document.createElement('p');
-                definition.innerHTML = `&bull; ${result.response}`;
-                botResponse.appendChild(definition);
-            } else if (result.type === 'faq') {
-                // Handle array of FAQ responses
-                const faqResponses = result.response;
-                faqResponses.forEach((faqResponse, index) => {
+            if (result.response.length > 0) {
+                result.response.forEach((response, index) => {
                     const definition = document.createElement('p');
-                    definition.innerHTML = `${index > 0 ? '<br>' : ''}&bull; ${faqResponse}`;
+                    definition.innerHTML = `${index > 0 ? '<br>' : ''}&bull; ${response}`;
                     botResponse.appendChild(definition);
                 });
-            } else {
-                // Default response type handling
-                const message = document.createElement('p');
-                message.innerHTML = `&bull; ${result.response}`;
-                botResponse.appendChild(message);
             }
-    
+
+            // Add related searches buttons
+            if (result.related_searches && result.related_searches.length > 0) {
+                const relatedSearchDiv = document.createElement('div');
+                relatedSearchDiv.className = 'relatedSearches';
+
+                result.related_searches.forEach((search) => {
+                    const button = document.createElement('button');
+                    button.innerText = search;
+                    button.onclick = () => {
+                        document.getElementById('query').value = search;
+                        document.getElementById('chatForm').submit();
+                    };
+                    relatedSearchDiv.appendChild(button);
+                });
+
+                botResponse.appendChild(relatedSearchDiv);
+            }
+
             document.getElementById('chatBody').appendChild(botResponse);
-    
+
             // Clear the input field
             document.getElementById('query').value = '';
-    
+
             // Scroll to the bottom after adding bot's response
             document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
         };
     </script>
-    
-    
-
-    
-    
 </body>
 </html>
