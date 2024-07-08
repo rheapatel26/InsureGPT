@@ -93,7 +93,7 @@ def search_important_terms(query):
         query = str(query)
 
     # Check if the Excel file name contains "imp terms"
-    is_imp_terms = 'imp terms' in terms_file_path.lower()
+    is_imp_terms = 'underwriter' in terms_file_path.lower()
 
     # Assuming important terms data has 'term' and 'definition' columns
     for df_name, df in terms_data.items():

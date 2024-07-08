@@ -77,7 +77,6 @@
 
         .relatedSearches button:hover {
             transform: translateY(-5px);
-            /* Adjust the distance as needed */
         }
 
         #chatForm {
@@ -102,6 +101,59 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
+        }
+
+        .typing-indicator {
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .typing-indicator span {
+            width: 10px;
+            height: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: dot-bounce 0.6s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.9s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dot-bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .response-loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #4CAF50;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
@@ -134,6 +186,18 @@
             // Scroll to the bottom
             document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
 
+            // Show typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('span');
+                typingIndicator.appendChild(dot);
+            }
+            document.getElementById('chatBody').appendChild(typingIndicator);
+
+            // Scroll to the bottom with typing indicator
+            document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+
             // Send the query to the server
             const response = await fetch('/ask', {
                 method: 'POST',
@@ -142,6 +206,9 @@
                 },
                 body: new URLSearchParams({ 'query': query }),
             });
+
+            // Remove typing indicator after receiving response
+            typingIndicator.remove();
 
             // Get the response from the server
             const result = await response.json();
