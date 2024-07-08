@@ -56,6 +56,8 @@ def correct_text(text):
         print(f"Error correcting text: {e}")
         return text
 
+import random
+
 def semantic_search(query, threshold=0.5):
     query_embedding = model.encode(query)
     similarities = cosine_similarity([query_embedding], faq_embeddings)[0]
@@ -70,8 +72,14 @@ def semantic_search(query, threshold=0.5):
     results.sort(key=lambda x: x[2], reverse=True)  # Sort by similarity score
     top_answers = [result[1] for result in results[:3]]  # Return only the top 3 answers
 
+    if not top_answers:
+        # If no direct matches found, return random 3 related searches from the same FAQ sheet
+        random_related_searches = random.sample(faq_questions, min(3, len(faq_questions)))
+        related_searches.extend(random_related_searches)
+
     # Return both top answers and related searches
     return top_answers, related_searches[:3]
+
 
 def get_qa_answer(question, context):
     try:
@@ -88,11 +96,11 @@ def search_important_terms(query):
 
     # Assuming important terms data has 'term' and 'definition' columns
     for df in terms_data.values():
-        if 'term' in df.columns and 'definition' in df.columns:
+        if 'term' in df.columns and 'defination' in df.columns:
             for _, row in df.iterrows():
                 # Convert row['term'] to string to avoid AttributeError
                 if query.lower() == str(row['term']).lower():
-                    return row['definition']
+                    return row['defination']
     return None
 
 @app.route('/')

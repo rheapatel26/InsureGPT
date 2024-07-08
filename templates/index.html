@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>InsureGPT</title>
     <style>
@@ -13,6 +14,7 @@
             align-items: center;
             height: 100vh;
         }
+
         #chatContainer {
             width: 100vw;
             max-width: 60%;
@@ -21,12 +23,14 @@
             border-radius: 10px;
             overflow: hidden;
         }
+
         #chatHeader {
             background-color: #4CAF50;
             color: white;
             text-align: center;
             padding: 10px;
         }
+
         #chatBody {
             padding: 20px;
             height: 300px;
@@ -34,9 +38,11 @@
             display: flex;
             flex-direction: column;
         }
+
         #chatBody p {
             margin: 5px 0;
         }
+
         .userQuery {
             align-self: flex-end;
             background-color: #DCF8C6;
@@ -44,6 +50,7 @@
             border-radius: 10px;
             max-width: 70%;
         }
+
         .botResponse {
             align-self: flex-start;
             background-color: #f1f1f1;
@@ -51,10 +58,12 @@
             border-radius: 10px;
             max-width: 70%;
         }
+
         .relatedSearches {
             margin-top: 10px;
             text-align: center;
         }
+
         .relatedSearches button {
             margin: 5px;
             padding: 5px 10px;
@@ -63,12 +72,20 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
+            transition: transform 0.2s ease-in-out;
         }
+
+        .relatedSearches button:hover {
+            transform: translateY(-5px);
+            /* Adjust the distance as needed */
+        }
+
         #chatForm {
             display: flex;
             padding: 10px;
             border-top: 1px solid #ccc;
         }
+
         #query {
             flex: 1;
             padding: 10px;
@@ -77,6 +94,7 @@
             margin-right: 10px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
+
         #submit {
             padding: 10px 20px;
             border: none;
@@ -87,6 +105,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="chatContainer">
         <div id="chatHeader">
@@ -100,7 +119,7 @@
     </div>
 
     <script>
-        document.getElementById('chatForm').onsubmit = async function(event) {
+        document.getElementById('chatForm').onsubmit = async function (event) {
             event.preventDefault();
             const query = document.getElementById('query').value;
 
@@ -121,7 +140,7 @@
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: new URLSearchParams({'query': query}),
+                body: new URLSearchParams({ 'query': query }),
             });
 
             // Get the response from the server
@@ -168,4 +187,5 @@
         };
     </script>
 </body>
+
 </html>
