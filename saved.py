@@ -1,22 +1,18 @@
-import streamlit as st
+from flask import Flask, request, jsonify, render_template
 import pandas as pd
 import os
 from transformers import pipeline
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import language_tool_python
-import random
 
-# Initialize the language tool for grammar correction
 tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
 
-# Initialize SentenceTransformer for semantic similarity
-model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+import random
 
-# Initialize the question-answering pipeline with a specific model
-qa_pipeline = pipeline('question-answering', model='distilbert-base-cased-distilled-squad')
+app = Flask(__name__)
 
-# Define file paths (use the Streamlit Cloud path for deployment)
+# Define file paths
 terms_file_path = os.path.join(os.getcwd(), "data/Terms.xlsx")
 faqs_file_path = os.path.join(os.getcwd(), "data/FAQs.xlsx")
 
@@ -29,12 +25,21 @@ def load_data(file_path):
             data[sheet_name] = xls.parse(sheet_name)
         return data
     except Exception as e:
-        st.error(f"Error loading data from {file_path}: {e}")
+        print(f"Error loading data from {file_path}: {e}")
         return {}
 
 # Initialize data from both Excel files
 terms_data = load_data(terms_file_path)
 faqs_data = load_data(faqs_file_path)
+
+# Initialize the question-answering pipeline with a specific model
+qa_pipeline = pipeline('question-answering', model='distilbert-base-cased-distilled-squad')
+
+# Initialize the language tool for grammar correction
+tool = language_tool_python.LanguageTool('en-US')
+
+# Initialize SentenceTransformer for semantic similarity
+model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 # Pre-compute embeddings for FAQ questions
 faq_questions = []
@@ -46,17 +51,15 @@ for df in faqs_data.values():
         faq_answers.extend(df['answer'].tolist())
 faq_embeddings = model.encode(faq_questions)
 
-# Function to correct text using LanguageTool
 def correct_text(text):
     try:
         matches = tool.check(text)
         corrected_text = language_tool_python.utils.correct(text, matches)
         return corrected_text
     except Exception as e:
-        st.error(f"Error correcting text: {e}")
+        print(f"Error correcting text: {e}")
         return text
 
-# Function for semantic search (FAQ matching)
 def semantic_search(query, threshold=0.5):
     query_embedding = model.encode(query)
     similarities = cosine_similarity([query_embedding], faq_embeddings)[0]
@@ -76,59 +79,75 @@ def semantic_search(query, threshold=0.5):
         random_related_searches = random.sample(faq_questions, min(3, len(faq_questions)))
         related_searches.extend(random_related_searches)
 
+    # Return both top answers and related searches
     return top_answers, related_searches[:3]
 
-# Function to search important terms
+def get_qa_answer(question, context):
+    try:
+        result = qa_pipeline(question=question, context=context)
+        return result['answer']
+    except Exception as e:
+        print(f"Error getting QA answer: {e}")
+        return "Sorry, I couldn't find an answer to your question."
+
 def search_important_terms(query):
+    # Convert query to string if it's not already
     if not isinstance(query, str):
         query = str(query)
 
     # Check if the Excel file name contains "imp terms"
     is_imp_terms = 'underwriter' in terms_file_path.lower()
 
+    # Assuming important terms data has 'term' and 'definition' columns
     for df_name, df in terms_data.items():
         if 'term' in df.columns and 'defination' in df.columns:
             for _, row in df.iterrows():
+                # Convert row['term'] to string to avoid AttributeError
                 if query.lower() == str(row['term']).lower():
                     return row['defination']
 
-            # If no match and it's 'imp terms', return random terms
+            # If no direct match found and it's 'imp terms', return random related terms
             if is_imp_terms:
                 random_related_terms = random.sample(df['term'].tolist(), min(3, len(df)))
                 return random_related_terms
 
     return None
 
-# Streamlit User Interface
-st.title("Insurance Query Answering System")
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-# User input for query
-user_query = st.text_input("Ask your question:")
+@app.route('/ask', methods=['POST'])
+def ask():
+    try:
+        user_query = request.form['query']
 
-if user_query:
-    # Apply grammar correction if the query is more than a single word
-    corrected_query = correct_text(user_query) if len(user_query.split()) > 1 else user_query
+        # Apply grammar correction only if the query is a full sentence
+        if len(user_query.split()) > 1:
+            corrected_query = correct_text(user_query)
+        else:
+            corrected_query = user_query
 
-    # Check if the query matches any important terms
-    term_definition = search_important_terms(corrected_query)
-    if term_definition:
-        st.write("Term Definition:", term_definition)
-    else:
-        # Perform semantic search if no important term is found
+        # Check if the query matches any important terms
+        term_definition = search_important_terms(corrected_query)
+        if term_definition:
+            return jsonify({'response': [term_definition], 'related_searches': []})
+
+        # If not an important term, search in FAQs
         faq_answers, related_searches = semantic_search(corrected_query)
         if faq_answers:
-            st.write("Top Answers:")
-            for answer in faq_answers:
-                st.write(f"- {answer}")
+            # Return only the top 3 responses
+            return jsonify({'response': faq_answers[:3], 'related_searches': related_searches})
 
-        # If no FAQ answers, try QA pipeline
-        if not faq_answers:
-            faq_context = " ".join(faq_answers)
-            qa_answer = qa_pipeline(question=corrected_query, context=faq_context)
-            st.write(f"QA Answer: {qa_answer['answer']}")
+        # If no relevant FAQs found, try QA pipeline
+        # Assuming all FAQ answers are in one sheet, use it as context
+        faq_context = " ".join(faq_answers)
+        qa_answer = get_qa_answer(corrected_query, faq_context)
+        return jsonify({'response': [qa_answer] if qa_answer else ["Sorry, I couldn't find an answer to your question."], 'related_searches': []})
 
-        # Display related searches
-        if related_searches:
-            st.write("Related Searches:")
-            for related in related_searches:
-                st.write(f"- {related}")
+    except Exception as e:
+        print(f"Error in /ask route: {e}")
+        return jsonify({'response': [f'An error occurred: {str(e)}'], 'related_searches': []})
+
+if __name__ == '__main__':
+    app.run(debug=True)
