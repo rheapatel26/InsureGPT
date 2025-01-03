@@ -53,6 +53,25 @@ def correct_text(text):
         return text
 
 def semantic_search(query, threshold=0.5):
+    query_embedding = model.encode(query).reshape(1, -1)  # Reshape to (1, 384)
+    similarities = cosine_similarity(query_embedding, faq_embeddings)[0]
+    results = []
+    related_searches = []
+
+    for i, similarity in enumerate(similarities):
+        if similarity > threshold:
+            results.append((faq_questions[i], faq_answers[i], similarity))
+            related_searches.append(faq_questions[i])
+
+    results.sort(key=lambda x: x[2], reverse=True)  # Sort by similarity score
+    top_answers = [result[1] for result in results[:3]]  # Return only the top 3 answers
+
+    if not top_answers:
+        random_related_searches = random.sample(faq_questions, min(3, len(faq_questions)))
+        related_searches.extend(random_related_searches)
+
+    return top_answers, related_searches[:3]
+
     query_embedding = model.encode(query)
     similarities = cosine_similarity([query_embedding], faq_embeddings)[0]
     results = []
