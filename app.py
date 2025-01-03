@@ -5,6 +5,9 @@ from transformers import pipeline
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import language_tool_python
+
+tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
+
 import random
 
 app = Flask(__name__)

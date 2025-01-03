@@ -5,4 +5,4 @@ streamlit>=1.24.1
 torch 
 scikit-learn
 sentence-transformers
-language-tool-python>=2.7.0
+language_tool_python
