@@ -41,11 +41,14 @@ faqs_data = load_data(faqs_file_path)
 faq_questions = []
 faq_answers = []
 faq_embeddings = []
+
 for df in faqs_data.values():
     if 'question' in df.columns and 'answer' in df.columns:
         faq_questions.extend(df['question'].tolist())
         faq_answers.extend(df['answer'].tolist())
-faq_embeddings = model.encode(faq_questions)
+
+# Ensure faq_embeddings is a 2D array
+faq_embeddings = model.encode(faq_questions, convert_to_tensor=True).cpu().numpy()
 
 # Function to correct text using LanguageTool API
 def correct_text(text):
@@ -80,8 +83,13 @@ def correct_text(text):
 
 # Function for semantic search (FAQ matching)
 def semantic_search(query, threshold=0.5):
-    query_embedding = model.encode(query)
-    similarities = cosine_similarity([query_embedding], faq_embeddings)[0]
+    query_embedding = model.encode(query, convert_to_tensor=True).cpu().numpy()  # Ensure query is 2D
+    st.write(f"Query embedding shape: {query_embedding.shape}")
+    st.write(f"FAQ embeddings shape: {faq_embeddings.shape}")
+
+    # Calculate cosine similarities between the query and FAQ embeddings
+    similarities = cosine_similarity(query_embedding, faq_embeddings)[0]
+    
     results = []
     related_searches = []
 
