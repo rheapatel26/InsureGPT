@@ -1,9 +1,0 @@
-flask>=2.2.5
-pandas>=1.5.3
-streamlit>=1.24.1
-torch 
-scikit-learn
-sentence-transformers
-language_tool_python
-transformers
-requests
