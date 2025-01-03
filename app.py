@@ -1,3 +1,4 @@
+import random
 from flask import Flask, request, jsonify
 import pandas as pd
 import os
@@ -51,8 +52,53 @@ def correct_text(text):
     except Exception as e:
         print(f"Error correcting text: {e}")
         return text
+    
+import random
+from sklearn.metrics.pairwise import cosine_similarity
 
 def semantic_search(query, threshold=0.5):
+    try:
+        # Ensure the query is not empty or None
+        if not query or len(query.strip()) == 0:
+            return [], []
+
+        # Get the query embedding and reshape it to (1, 384)
+        query_embedding = model.encode(query).reshape(1, -1)
+        
+        # Ensure FAQ embeddings are not empty
+        if len(faq_embeddings) == 0:
+            return [], []
+
+        # Compute cosine similarity between the query embedding and all FAQ embeddings
+        similarities = cosine_similarity(query_embedding, faq_embeddings)[0]
+        
+        results = []
+        related_searches = []
+
+        # Filter out the results with similarity greater than the threshold
+        for i, similarity in enumerate(similarities):
+            if similarity > threshold:
+                results.append((faq_questions[i], faq_answers[i], similarity))
+                related_searches.append(faq_questions[i])
+
+        # Sort the results based on the similarity score in descending order
+        results.sort(key=lambda x: x[2], reverse=True)
+
+        # Return only the top 3 answers (or fewer if not enough results)
+        top_answers = [result[1] for result in results[:3]]
+
+        # If no answers are found, return random related searches
+        if not top_answers:
+            random_related_searches = random.sample(faq_questions, min(3, len(faq_questions)))
+            related_searches.extend(random_related_searches)
+
+        return top_answers, related_searches[:3]
+
+    except Exception as e:
+        # Handle any unforeseen errors
+        print(f"Error during semantic search: {e}")
+        return [], []
+
     query_embedding = model.encode(query).reshape(1, -1)  # Reshape to (1, 384)
     similarities = cosine_similarity(query_embedding, faq_embeddings)[0]
     results = []
