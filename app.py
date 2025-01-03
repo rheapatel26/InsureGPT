@@ -10,6 +10,7 @@ import random
 # Initialize the language tool for grammar correction
 tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
 
+
 # Initialize SentenceTransformer for semantic similarity
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
