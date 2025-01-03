@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import os
 import random
+from torch import cosine_similarity
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 import pandas as pd
