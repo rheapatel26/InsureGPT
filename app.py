@@ -6,10 +6,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import language_tool_python
 import random
+import requests
 
-# Initialize the language tool for grammar correction
-tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
-
+# Initialize the language tool for grammar correction using the API
+LANGUAGE_TOOL_API = 'https://api.languagetool.org/v2/check'
 
 # Initialize SentenceTransformer for semantic similarity
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
@@ -47,12 +47,33 @@ for df in faqs_data.values():
         faq_answers.extend(df['answer'].tolist())
 faq_embeddings = model.encode(faq_questions)
 
-# Function to correct text using LanguageTool
+# Function to correct text using LanguageTool API
 def correct_text(text):
     try:
-        matches = tool.check(text)
-        corrected_text = language_tool_python.utils.correct(text, matches)
-        return corrected_text
+        data = {
+            'text': text,
+            'language': 'en-US'
+        }
+        
+        # Make a POST request to the LanguageTool API
+        response = requests.post(LANGUAGE_TOOL_API, data=data)
+        
+        if response.status_code == 200:
+            result = response.json()
+            matches = result['matches']
+            
+            # Apply corrections
+            corrected_text = text
+            for match in matches:
+                # Apply the suggested replacement (assuming single word correction)
+                replacement = match['replacements'][0]['value']
+                start = match['offset']
+                end = start + match['length']
+                corrected_text = corrected_text[:start] + replacement + corrected_text[end:]
+                
+            return corrected_text
+        else:
+            return text  # Return original text if API request fails
     except Exception as e:
         st.error(f"Error correcting text: {e}")
         return text
