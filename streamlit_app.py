@@ -1,18 +1,21 @@
-from flask import Flask, request, jsonify
-import pandas as pd
+import streamlit as st
+import requests
 import os
+import random
 from transformers import pipeline
-from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+import pandas as pd
 import language_tool_python
 
-app = Flask(__name__)
+# Flask backend URL
+FLASK_URL = 'http://localhost:5000/ask'
 
-# Define file paths
+tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
+
+# Load the FAQ and Terms data just as in the Flask code
 terms_file_path = os.path.join(os.getcwd(), "data/Terms.xlsx")
 faqs_file_path = os.path.join(os.getcwd(), "data/FAQs.xlsx")
 
-# Load data from all sheets in the Excel file
 def load_data(file_path):
     try:
         xls = pd.ExcelFile(file_path)
@@ -24,11 +27,10 @@ def load_data(file_path):
         print(f"Error loading data from {file_path}: {e}")
         return {}
 
-# Initialize data from both Excel files
 terms_data = load_data(terms_file_path)
 faqs_data = load_data(faqs_file_path)
 
-# Initialize SentenceTransformer for semantic similarity
+# Initialize the semantic search model
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 # Pre-compute embeddings for FAQ questions
@@ -40,8 +42,6 @@ for df in faqs_data.values():
         faq_questions.extend(df['question'].tolist())
         faq_answers.extend(df['answer'].tolist())
 faq_embeddings = model.encode(faq_questions)
-
-tool = language_tool_python.LanguageTool('en-US', remote_server='https://api.languagetool.org')
 
 def correct_text(text):
     try:
@@ -63,8 +63,8 @@ def semantic_search(query, threshold=0.5):
             results.append((faq_questions[i], faq_answers[i], similarity))
             related_searches.append(faq_questions[i])
 
-    results.sort(key=lambda x: x[2], reverse=True)
-    top_answers = [result[1] for result in results[:3]]
+    results.sort(key=lambda x: x[2], reverse=True)  # Sort by similarity score
+    top_answers = [result[1] for result in results[:3]]  # Return only the top 3 answers
 
     if not top_answers:
         random_related_searches = random.sample(faq_questions, min(3, len(faq_questions)))
@@ -90,30 +90,30 @@ def search_important_terms(query):
 
     return None
 
-@app.route('/ask', methods=['POST'])
-def ask():
-    try:
-        user_query = request.form['query']
+# Streamlit frontend
+st.title("FAQ and Query System")
 
-        if len(user_query.split()) > 1:
-            corrected_query = correct_text(user_query)
+user_query = st.text_input("Ask your question here:")
+
+if user_query:
+    # Call the Flask backend
+    payload = {'query': user_query}
+    response = requests.post(FLASK_URL, data=payload)
+    if response.status_code == 200:
+        data = response.json()
+        answers = data['response']
+        related_searches = data['related_searches']
+
+        if answers:
+            st.subheader("Top Answers")
+            for ans in answers:
+                st.write(ans)
         else:
-            corrected_query = user_query
+            st.write("No direct answers found.")
 
-        term_definition = search_important_terms(corrected_query)
-        if term_definition:
-            return jsonify({'response': [term_definition], 'related_searches': []})
-
-        faq_answers, related_searches = semantic_search(corrected_query)
-        if faq_answers:
-            return jsonify({'response': faq_answers[:3], 'related_searches': related_searches})
-
-        faq_context = " ".join(faq_answers)
-        qa_answer = "Sorry, I couldn't find an answer to your question."
-        return jsonify({'response': [qa_answer], 'related_searches': []})
-
-    except Exception as e:
-        return jsonify({'response': [f'An error occurred: {str(e)}'], 'related_searches': []})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        if related_searches:
+            st.subheader("Related Search Results")
+            for related in related_searches:
+                st.write(f"- {related}")
+    else:
+        st.write("There was an error with the backend.")
