@@ -1,21 +1,31 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# Start with the Python 3.11 slim image
+FROM python:3.11-slim
 
-# Set the working directory in the container
-WORKDIR /app
+# Install Java (OpenJDK 17) and clean up to reduce image size
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jdk-headless \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*  # Clean up apt cache to reduce image size
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Set the Java environment variables (just to be sure)
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
 
-# Install the dependencies
+# Optionally, verify the Java installation
+RUN java -version
+
+# Install Python dependencies (copy requirements.txt first to take advantage of Docker cache)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application files
+COPY . .
 
 # Expose the port Flask will run on (this is required by Docker to map the port)
 EXPOSE 5000
 
-# Define the environment variable for Flask
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+# Verify if Java is installed (this is useful for debugging)
+RUN echo "Java installed at: $JAVA_HOME"
 
-# Run the application
+# Set the command to run your app
 CMD ["python", "app.py"]
