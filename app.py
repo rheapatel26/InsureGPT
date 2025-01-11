@@ -9,7 +9,6 @@ import random
 
 app = Flask(__name__)
 
-# Define file paths
 terms_file_path = os.path.join(os.getcwd(), "data/Terms.xlsx")
 faqs_file_path = os.path.join(os.getcwd(), "data/FAQs.xlsx")
 
@@ -146,5 +145,5 @@ def ask():
         print(f"Error in /ask route: {e}")
         return jsonify({'response': [f'An error occurred: {str(e)}'], 'related_searches': []})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
