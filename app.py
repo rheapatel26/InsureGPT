@@ -31,8 +31,7 @@ faqs_data = load_data(faqs_file_path)
 # Initialize the question-answering pipeline with a specific model
 qa_pipeline = pipeline('question-answering', model='distilbert-base-cased-distilled-squad')
 
-# Initialize the language tool for grammar correction
-tool = language_tool_python.LanguageTool('en-US')
+tool = language_tool_python.LanguageTool('en-US') 
 
 # Initialize SentenceTransformer for semantic similarity
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
@@ -146,4 +145,4 @@ def ask():
         return jsonify({'response': [f'An error occurred: {str(e)}'], 'related_searches': []})
 
 # if __name__ == '__main__':
-#     app.run(debug=True)
+    # app.run(debug=True)
