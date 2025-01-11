@@ -1,25 +1,19 @@
-# Use an official Python base image
+# Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Install system dependencies (including Java)
-RUN apt-get update && \
-    apt-get install -y openjdk-11-jre && \
-    apt-get clean && \
-    java -version  # This will verify that Java is installed
+# Install Java (OpenJDK)
+RUN apt-get update && apt-get install -y openjdk-11-jre-headless
 
-# Set JAVA_HOME environment variable
+# Set environment variables for Java (optional)
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-# Set the working directory in the container
-WORKDIR /app
-
-# Copy the requirements.txt and install dependencies
-COPY requirements.txt /app/
+# Install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application files
-COPY . /app/
+# Copy your application files
+COPY . .
 
-# Command to run your application
+# Run your app
 CMD ["python", "app.py"]
